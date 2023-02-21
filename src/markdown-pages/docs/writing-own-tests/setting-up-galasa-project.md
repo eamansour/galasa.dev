@@ -7,13 +7,20 @@ In this section, you will learn how to set up an Eclipse project structure to ac
 
 ## A bit about Maven
 
-<a href="http://maven.apache.org" target="_blank">Maven</a> is an Open Source build automation tool, initially created in 2003 and part of the Apache Software Foundation. You do not explicitly need to install it - usually, it comes with your Eclipse distribution as the _.m2e_ plugin. If, for some reason, it isn't part of your Eclipse distribution, the Galasa Eclipse plugin downloads and installs it silently during its own installation and configuration. In extremely rare situations, this might not happen - just drop a message in our <a href="https://galasa.slack.com" target="_blank"> Galasa Slack</a> workspace if you sense this is the case, and we'll help you out. (<a href="https://join.slack.com/t/galasa/shared_invite/zt-ele2ic8x-VepEO1o13t4Jtb3ZuM4RUA" target="_blank">Register to join</a> first if you're not yet a member). In any case, if you have run any of the SimBank tests, you are already past this hurdle.
+<a href="http://maven.apache.org" target="_blank">Maven</a> is an Open-Source build automation tool, initially created in 2003 and part of the Apache Software Foundation. You do not explicitly need to install it - usually, it comes with your Eclipse distribution as the _.m2e_ plugin. If, for some reason, it isn't part of your Eclipse distribution, the Galasa Eclipse plugin downloads and installs it silently during its own installation and configuration. In extremely rare situations, this might not happen - just drop a message in our <a href="https://galasa.slack.com" target="_blank"> Galasa Slack</a> workspace if you sense this is the case, and we'll help you out. (<a href="https://join.slack.com/t/galasa/shared_invite/zt-ele2ic8x-VepEO1o13t4Jtb3ZuM4RUA" target="_blank">Register to join</a> first if you're not yet a member). In any case, if you have run any of the SimBank tests, you are already past this hurdle.
 
 If you have already installed Maven as part of some other software project, no action is needed.
 
 Maven is _opinionated_, which means that you need to comply with its expectations about how a project and its directories should be organised. When you create a Maven project in Eclipse, you should use the generated structure, or if you are importing a project, the provided structure.
 
 The most visible practical evidence that a project is a Maven project is its pervasive use of `pom.xml` (Project Object Model) files. These XML files contain the magic that allows Maven to manage your project dependencies and build orchestration. You will see that a large part of setting up your Galasa project is to configure these properly.
+
+## A bit about Gradle
+<a href="https://gradle.org" target="_blank">Gradle</a> is an Open-Source build automation tool that was first released in 2008. Gradle has the ability to build projects in widely-used languages like Java, Kotlin, and C++, making it an incredibly popular build tool. Like Maven, Gradle usually comes integrated with your Eclipse distribution, so you do not need to explicitly install it unless you would like to use Gradle via a command-line interface (see <a href="https://gradle.org/install" target="_blank">Gradle's installation documentation</a> for instructions to install Gradle). If you run into any problems with your Gradle installation, just drop us a message in our <a href="https://galasa.slack.com" target="_blank">Galasa Slack workspace</a> and we'll help you out. (<a href="https://join.slack.com/t/galasa/shared_invite/zt-ele2ic8x-VepEO1o13t4Jtb3ZuM4RUA" target="_blank">Register to join</a> first if you're not yet a member).
+
+If you have already installed Gradle as part of some other software project, no action is needed.
+
+To determine whether a project is a Gradle project, the project would include files that feature the `.gradle` extension, like `build.gradle` and `settings.gradle`. These files are written in Gradle's Groovy DSL or Gradle's Kotlin DSL, and contain everything Gradle needs to manage dependencies, plugins, tasks, and any other project configurations.
 
 ## Before you start
 
@@ -37,6 +44,7 @@ For simplicity, it is assumed that you will only have one version of a test in p
 
 This setup is designed as an example of how to create a project structure that might ultimately be deployed to a Maven repository so that your Galasa automation system can find everything it needs to run.
 
+### Using Maven
 In a temporary directory - and you can do this with whatever tools you choose, no need to use Eclipse - create the following file structure:
 
 ```
@@ -354,18 +362,251 @@ If you have followed through on any of the provided SimBank tests, you will have
 
 </details>
 
+### Using Gradle
+In a temporary directory - and you can do this with whatever tools you choose, no need to use Eclipse - create the following file structure:
+
+```
+────com.example.tests.parent
+    │   build.gradle
+    │   settings.gradle
+    ├───com.example.tests.atests
+    │   │   build.gradle
+    │   │   bnd.bnd
+    │   └───src
+    │       └───main
+    │           ├───java
+    │           │   └───com
+    │           │       └───example
+    │           │           └───tests
+    │           │               └───atests
+    │           │                   │   MostBasicTest.java
+    │           └───resources
+    ├───com.example.tests.manager
+    │   │   build.gradle
+    │   │   bnd.bnd
+    │   └───src
+    │       └───main
+    │           ├───java
+    │           └───resources
+    └───com.example.tests.obr
+        │   build.gradle
+```
+
+The names of the root folders in the above snippet were just chosen for this exercise, however, the names of the lower level folders (`src`, `main`, `java` and so on) are important, so name them as shown above!
+
+As well as a hierarchy of directories, there are eight files to be placed at specific locations:
+
+1. `settings.gradle` in `com.example.tests.parent`
+2. `build.gradle` in `com.example.tests.parent`
+3. `build.gradle` in `com.example.tests.parent/com.example.tests.atests`
+4. `build.gradle` in `com.example.tests.parent/com.example.tests.manager`
+5. `build.gradle` in `com.example.tests.parent/com.example.tests.obr`
+6. `bnd.bnd` in `com.example.tests.parent/com.example.tests.atests`
+7. `bnd.bnd` in `com.example.tests.parent/com.example.tests.manager`
+8. `MostBasicTest.java` in a `com.example.tests.atests` package within `com.example.tests.parent/com.example.tests.atests/src/main/java`
+
+Set up the files in their designated directories as follows:
+
+<details>
+<summary><code>com.example.tests.parent/settings.gradle</code></summary>
+
+This file defines the repositories used to retrieve the plugins for the Gradle test project as well as including the `com.example.tests.manager`, `com.example.tests.atests`, and `com.example.tests.obr` subprojects into the Gradle build.
+
+```groovy
+pluginManagement {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        maven {
+            url = 'https://development.galasa.dev/prod/maven-repo/obr'
+        }
+        gradlePluginPortal()
+    }
+}
+
+include 'com.example.tests.manager'
+include 'com.example.tests.atests'
+include 'com.example.tests.obr'
+```
+
+</details>
+
+<details>
+<summary><code>com.example.tests.parent/build.gradle</code></summary>
+
+This file defines the repositories Gradle searches in to retrieve dependencies for all subprojects. It also applies the `java` plugin to all subprojects to use Java compilation and testing features.
+
+```groovy
+subprojects {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        maven {
+            url = 'https://development.galasa.dev/prod/maven-repo/obr'
+        }
+    }
+    apply plugin: 'java'
+}
+```
+
+</details>
+
+<details>
+<summary><code>com.example.tests.parent/com.example.tests.atests/build.gradle</code></summary>
+
+This file defines the dependencies that the `com.example.tests.atests` subproject uses. It also applies the `biz.aQute.bnd.builder` plugin to allow an OSGi bundle to be built for the subproject.
+
+```groovy
+plugins {
+    id 'biz.aQute.bnd.builder' version '6.4.0'
+}
+
+group = 'com.example.tests'
+version = '0.1.0-SNAPSHOT'
+
+dependencies {
+    implementation project(':com.example.tests.manager')
+
+    implementation 'dev.galasa:dev.galasa:0.+'
+    implementation 'org.assertj:assertj-core:3.11.+'
+}
+```
+
+</details>
+
+<details>
+<summary><code>com.example.tests.parent/com.example.tests.manager/build.gradle</code></summary>
+
+This file defines the dependencies that the `com.example.tests.manager` subproject uses. Like the previous `build.gradle` file, it also applies the `biz.aQute.bnd.builder` plugin to allow an OSGi bundle to be built for the subproject.
+
+```groovy
+plugins {
+    id 'biz.aQute.bnd.builder' version '6.4.0'
+}
+
+group = 'com.example.tests'
+version = '0.1.0-SNAPSHOT'
+
+dependencies {
+    implementation 'dev.galasa:dev.galasa:0.+'
+    implementation 'dev.galasa:dev.galasa.framework:0.+'    
+    implementation 'org.osgi:org.osgi.service.component.annotations:1.3.0'
+}
+```
+
+</details>
+
+<details>
+<summary><code>com.example.tests.parent/com.example.tests.obr/build.gradle</code></summary>
+
+This file uses Galasa's Gradle OBR Plugin to build an OBR for the test project. The plugin's `bundle` configuration is used to specify the OBR's contents, which in this case includes the `com.example.tests.manager` and `com.example.tests.atests` bundles.
+
+```groovy
+plugins {
+    id 'dev.galasa.obr' version '0.15.0'
+}
+
+group = 'com.example.tests'
+version = '0.1.0-SNAPSHOT'
+
+dependencies {
+    bundle project(':com.example.tests.manager')
+    bundle project(':com.example.tests.atests')
+}
+```
+
+</details>
+
+<details>
+<summary><code>com.example.tests.parent/com.example.tests.atests/bnd.bnd</code></summary>
+
+This file defines the OSGi bundle for the `com.example.tests.atests` project.
+
+```bnd
+-snapshot: ${tstamp}
+Bundle-Name: My Tests
+Import-Package: *
+```
+
+</details>
+
+<details>
+<summary><code>com.example.tests.parent/com.example.tests.manager/bnd.bnd</code></summary>
+
+This file defines the OSGi bundle for the `com.example.tests.manager` project.
+
+```bnd
+-snapshot: ${tstamp}
+Bundle-Name: My Manager
+Import-Package: *
+```
+
+</details>
+
+<details>
+<summary>
+<code>com.example.tests.parent/</code><br>
+<code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;com.example.tests.atests/src/main/java/</code><br>
+<code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;com/example/tests/atests/MostBasicTest.java</code>
+</summary>
+
+A minimal java test.
+
+```java
+package com.example.tests.atests;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import dev.galasa.Test;
+
+@Test
+public class MostBasicTest {
+	@Test
+	public void helloWorldTest() {
+		assertThat("Deep integration testing").contains("Deep");
+	}
+}
+```
+
+If you have followed through on any of the provided SimBank tests, you will have no problem understanding what's going on in this example!
+
+</details>
+
 ## Importing the prepared directory into Eclipse
 
 Launch Eclipse and choose _File > Import..._
 
-In the _Select_ dialog, expand _Maven_, choose _Existing Maven Projects_ and click _Next_.
+In the _Select_ dialog, expand _Maven_, choose _Existing Maven Projects_ and click _Next_. If you are using Gradle, expand _Gradle_ and choose _Existing Gradle Project_ in the _Select_ dialog.
 
 Navigate to your root project directory - _com.example.tests.parent_ in this case - and follow the remaining prompts to complete the import. If you see a warning or error dialog, opt to resolve the error later.
 
 When viewed in the _Package Explorer_ your set of projects should resemble (your project won't yet have those _target_ folders - they indicate that the project has been built at least once):
 
-![Project and sub-projects](./project-and-subproject.png)
+![Maven project and sub-projects](./project-and-subproject.png)
 
-To build the project with Java version 1.8, choose _Run > Run Configurations_ from the main menu. Create a Maven build from the _Main_ tab of the _Create, manage, and run configurations_ dialog and wait for the build process to complete.
+If you are using Gradle, your project structure should look similar to the structure shown below.
+
+![Gradle project and sub-projects](./gradle-project-structure.png)
+
+## Building the created test project
+
+To build the project with Java version 1.8, choose _Run > Run Configurations_ from the main menu and proceed with the instructions specific to your chosen build tool below.
+
+### Using Maven
+To build the test project from Eclipse using Maven:
+
+1. Create a Maven build from the _Main_ tab of the _Create, manage, and run configurations_ dialog.
+2. With the _Create, manage, and run configurations_ dialog open, select the `com.example.tests.parent` directory using the _Workspace_ button under the _Base Directory_ field.
+3. Enter `install` in the _Goals_ input field.
+4. Hit _Apply_ and then _Run_, and wait for the build process to complete.
+
+### Using Gradle
+To build the test project from Eclipse using Gradle:
+
+1. Create a Gradle Task from the _Main_ tab of the _Create, manage, and run configurations_ dialog.
+2. With the _Create, manage, and run configurations_ dialog open, select the `com.example.tests.parent` directory using the _Workspace_ button under the _Working Directory_ field.
+3. In the _Gradle Tasks_ list, add a task and change it to `build`
+4. Hit _Apply_ and then _Run_, and wait for the build process to complete.
+
+## Running the created test
 
 From _Run > Run Configurations_, click _Galasa_ (not Galasa SimBank) and configure a new run configuration (call it MostBasicTest). Specify `com.example.tests.atests` for the project, and `MostBasicTest` for the test class. Press _Apply_ and then _Run_. The new run configuration executes and a familiar set of Galasa messages appears in the Eclipse console as the test runs to successful completion.
